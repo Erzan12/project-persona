@@ -1,0 +1,32 @@
+{
+  "name": "John Doe",
+  "age": 25,
+  "location": "Philippines",
+  "education": [
+    {
+      "degree": "BS Computer Science",
+      "school": "ABC University"
+    }
+  ],
+  "skills": [
+    "Next.js",
+    "React",
+    "Node.js",
+    "TypeScript",
+    "AI"
+  ],
+  "projects": [
+    {
+      "name": "Portfolio Website",
+      "description": "Built with Next.js"
+    },
+    {
+      "name": "AI Chatbot",
+      "description": "Built with OpenRouter"
+    }
+  ],
+  "socials": {
+    "github": "https://github.com/johndoe",
+    "linkedin": "https://linkedin.com/in/johndoe"
+  }
+}
