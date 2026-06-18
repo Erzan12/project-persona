@@ -1,4 +1,4 @@
-export const project = [
+const projects = [
     {
     title: "ShopStack - Fullstack E-Commerce Application",
     description: "ShopStack is a full-stack multi-tenant marketplace platform built with modern web technologies.",
@@ -80,3 +80,7 @@ export const project = [
     featured: true,
   },
 ] 
+
+export async function getProjects() {
+    return projects
+}
