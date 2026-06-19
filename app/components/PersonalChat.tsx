@@ -1,15 +1,23 @@
 "use client"
 
-import { useChat } from "@ai-sdk/react";
-import { useState } from "react";
-import { DefaultChatTransport } from "ai";
+import { useChat } from "@ai-sdk/react"
+import { useEffect, useState } from "react"
+import { DefaultChatTransport, type UIMessage } from "ai"
 
 export function PersonaChat() {
+  const [initialMessages, setInitialMessages] = useState<UIMessage[] | undefined>(undefined)
+
+  useEffect(() => {
+    fetch("/api/chat/history")
+      .then((res) => res.json())
+      .then((data) => setInitialMessages(data.messages))
+      .catch(() => setInitialMessages([]))
+  }, [])
+
   const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-        api: "/api/chat",
-    }),
-  });
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    messages: initialMessages,
+  })
   const [input, setInput] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
