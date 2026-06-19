@@ -1,11 +1,11 @@
-{
-  "name": "John Doe",
-  "age": 25,
+const details = {
+  "name": "Earl jan Do",
+  "age": 26,
   "location": "Philippines",
   "education": [
     {
-      "degree": "BS Computer Science",
-      "school": "ABC University"
+      "degree": "BS Information Technology",
+      "school": "Southern Leyte State University (SLSU)"
     }
   ],
   "skills": [
@@ -13,6 +13,7 @@
     "React",
     "Node.js",
     "TypeScript",
+    "Nest.js",
     "AI"
   ],
   "projects": [
@@ -26,7 +27,11 @@
     }
   ],
   "socials": {
-    "github": "https://github.com/johndoe",
+    "github": "https://github.com/erzan12",
     "linkedin": "https://linkedin.com/in/johndoe"
   }
+}
+
+export async function getProfile() {
+  return details
 }
