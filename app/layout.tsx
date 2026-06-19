@@ -1,6 +1,4 @@
 import "./globals.css";
-import { CopilotKit } from "@copilotkit/react-core";
-import "@copilotkit/react-core/v2/styles.css";
 
 export default function RootLayout({
   children,
@@ -10,9 +8,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <CopilotKit runtimeUrl="/api/copilotkit">
-          {children}
-        </CopilotKit>
+        {children}
       </body>
     </html>
   );

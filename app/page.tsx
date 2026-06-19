@@ -1,4 +1,4 @@
-import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import { PersonaChat } from "./components/PersonalChat";
 
 export default function Home() {
   return (
@@ -10,7 +10,7 @@ export default function Home() {
           position: "relative",
         }}
       >
-        <CopilotSidebar />
+        <PersonaChat />
       </div>
     </main>
   );
