@@ -28,11 +28,19 @@ const details = {
       "twitter": "",
       "facebook": "https://www.facebook.com/erjan.do.7"
     },
+    "petName": {
+      "cat": "My cat name is Cali I am more of a cat person but i love dogs too! but i really love cats more because of there attitude and shinanigans which amazes me, i love feeding strays too! because I can relate myself to way thats why my heart is close to these innocent creatures. Its the only thing I can do for them many eyes can see but no one will dare to act."
+    },
+    "workSchedule": {
+      "day": "Monday to Saturday but saturday is halfday but it is count as whole day, Monday to Friday working hours is from 8:30 am to 5:00 pm", 
+      "availability": "I am available when I will get home I think from 5:30 pm to 9 pm since I sleep early and wake early morning the next day. And saturday afternoon and sunday I am available",
+      "note": "We do not have work though on holidays"
+    },
     "familyMembers": [
       {
         "mother": "Era Humawid Do ",
         "father": "Edgar Dasig Do Jr.",
-        "parentOccupation": "Both are working in the Government especifically DEPED, my Father is in the Division of Maasin city as Admin Aide my mother is a disbursing officer in Silago Central School"
+        "parentOccupation": "Both are working in the Government especifically DEPED, my Father is in the Division of Maasin city as Admin Aide my mother is a Senior Bookkeeper in Silago Central School"
       },
       {
         "siblings": ["Jiera Mae Humawid Do", "Jiera Ann Humawid Do"],
