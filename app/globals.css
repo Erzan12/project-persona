@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.sidebar-wrapper {
+  width: 300px;
+}
+
+aside[data-copilot-sidebar="true"] {
+  width: 400px !important;
+  height: 600px !important;
+
+  top: auto !important;
+  bottom: 20px !important;
+  right: 20px !important;
+
+  border-radius: 16px;
+  overflow: hidden;
+}

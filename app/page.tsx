@@ -1,13 +1,17 @@
 import { CopilotSidebar } from "@copilotkit/react-core/v2";
-import ChatHome from "@/app/component/chat";
 
 export default function Home() {
   return (
-    <div>
-      <main>
-        <ChatHome />
-        <CopilotSidebar/>
-      </main>
-    </div>
+    <main>
+      <div
+        style={{
+          height: "500px",
+          width: "350px",
+          position: "relative",
+        }}
+      >
+        <CopilotSidebar />
+      </div>
+    </main>
   );
 }
