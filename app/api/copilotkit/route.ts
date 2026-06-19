@@ -1,4 +1,4 @@
-import { getGirlfriend } from "@/app/data/girlfriend";
+import { getGirlfriend } from "@/app/data/girlfriend"; // assuming this returns the profile JSON structure
 import { getProfile } from "@/app/data/profile";
 import { getProjects } from "@/app/data/projects";
 import {
@@ -8,11 +8,12 @@ import {
 import { BuiltInAgent } from "@copilotkit/runtime/v2";
 import { NextRequest } from "next/server";
 
-export const POST = async (req: NextRequest) => {
+const handleCopilotRequest = async (req: NextRequest) => {
   const projects = await getProjects();
   const girlFriend = await getGirlfriend();
-  const profile = await getProfile();
+  const profileDetails = await getProfile();
 
+  // 1. Format Projects Context
   const projectContext = projects
     .map(
       (p) => `
@@ -25,44 +26,43 @@ export const POST = async (req: NextRequest) => {
     )
     .join("\n\n");
 
+  // 2. Format Girlfriend Context
   const girlFriendContext = girlFriend
     .map(
       (p) => `
-        Girlfriend: ${p.Girlfriend},
-        Character: ${p.Character},
-        Age: ${p.Age}
+      Girlfriend: ${p.Girlfriend},
+      Character: ${p.Character},
+      Age: ${p.Age}
       `
     )
+    .join("\n");
 
-  // const detailContext = profile
-  //   .map(
-  //     (m) => `
-  //     Name: ${m.}
-  //     `
-  //   )
-  //   .join("\n\n");
+  const profileContext = JSON.stringify(profileDetails, null, 2)
 
+  // 4. Inject all context pools into the system prompt
   const builtInAgent = new BuiltInAgent({
     model: "openai:gpt-5.4-mini",
 
     prompt: `
     You are Erzan's personal AI assistant.
 
-    You can answer questions about Erzan's portfolio projects and my girlfriend since she requested to ask about her to you hahaha.
+    You can answer questions about Erzan's profile, family, professional experiences, and portfolio projects.
 
-    Projects:
+    --- ERZAN'S PROFESSIONAL PROFILE ---
+    ${profileContext}
 
+    --- PROJECTS ---
     ${projectContext}
+
+    --- GIRLFRIEND DATA ---
     ${girlFriendContext}
 
-    When users ask about projects:
-    - Recommend relevant projects.
-    - Explain technologies used.
-    - Provide demo links when requested.
-    - Mention GitHub repositories when relevant.
-    - Be concise and accurate.
-    - The girlfriend is many but i only love one.
-    - Tell jokes about my girlfriend make fun of here if I will ask you.
+    --- INSTRUCTIONS ---
+    --- INSTRUCTIONS ---
+    - When asked about Earl's/Erzan's family, explicitly use the details provided under the "familyMembers" key (mention his parents Era and Edgar Jr., their occupations, his twin sisters Jiera Mae and Jiera Ann who study at SLSU, and his grandparents).
+    - When users ask about his living arrangements or workplace, refer to Consolacion, Cebu, and Avega Bros.
+    - When users ask about projects: Recommend relevant projects, explain stacks, and provide links.
+    - When users ask about girlfriend: The girlfriend is many but he only loves one. Tell jokes about her if asked.
     `,
   });
 
@@ -78,4 +78,13 @@ export const POST = async (req: NextRequest) => {
   });
 
   return handleRequest(req);
+};
+
+// EXPORT BOTH POST AND GET METHODS
+export const POST = async (req: NextRequest) => {
+  return handleCopilotRequest(req);
+};
+
+export const GET = async (req: NextRequest) => {
+  return handleCopilotRequest(req);
 };
