@@ -16,6 +16,9 @@ const details = {
       "gmail": "do.earljan@gmail.com",
       "mobileNumber": "09633316391"
     },
+    "Age": {
+      "birthday": "I was born on May 12, 2000 and I am now 26 years old"
+    },
     "currentEmployer" : {
       "company": "Avega Bros. Integrated Shipping Corp or ABISC"
     },
