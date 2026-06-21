@@ -5,7 +5,7 @@ import { prisma } from "@/app/lib/prisma"
 import { checkRateLimit } from "@/app/lib/rate-limit"
 import { getOrCreateConversation, getOrCreateVisitor } from "@/app/lib/visitor"
 import { createGroq } from "@ai-sdk/groq"
-import { streamText, convertToModelMessages, type UIMessage } from "ai"
+import { streamText, generateObject, convertToModelMessages, type UIMessage, generateText } from "ai"
 import { z } from "zod"
 
 export const runtime = "nodejs"
@@ -14,6 +14,24 @@ const messageSchema = z.object({ role: z.enum(["user", "assistant"]) }).passthro
 const bodySchema = z.object({
   messages: z.array(messageSchema).min(1).max(50),
 })
+
+// Schema for the structured visitor memory — this is what guarantees valid JSON,
+// instead of asking the model nicely to "return JSON only" in a prompt.
+// const memorySchema = z.object({
+//   interests: z.array(z.string()),
+//   lastInteraction: z.string(),
+// })
+
+// more forgiving options with memory handling make it optional or can be empty
+const memorySchema = z.object({
+  interests: z.array(z.string()).default([]),
+  lastInteraction: z.string().default(""),
+})
+
+// const memorySchema = z.object({
+//   interests: z.array(z.string()).optional(),
+//   lastInteraction: z.string().optional(),
+// })
 
 const apiKey = process.env.GROQ_API_KEY
 
@@ -38,8 +56,32 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "invalid_request" }, { status: 400 })
   }
 
+  const visitor = await getOrCreateVisitor()
+  const conversation = await getOrCreateConversation(visitor.id)
+
+  const history = await prisma.message.findMany({
+    where: {
+      conversationId: conversation.id,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 12
+  })
+
+  const historyMessages = history
+    .reverse()
+    .slice(0, -1)
+    .map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }))
+
   const uiMessages = parsed.data.messages as unknown as UIMessage[]
-  const modelMessages = await convertToModelMessages(uiMessages)
+  const modelMessages = [
+    ...historyMessages,
+    ...await convertToModelMessages(uiMessages),
+  ]
 
   const latestUserMessage = uiMessages[uiMessages.length - 1]
   const latestUsertext =
@@ -57,9 +99,6 @@ export async function POST(request: Request): Promise<Response> {
     }
     remaining = rl.remaining
   }
-
-  const visitor = await getOrCreateVisitor()
-  const conversation = await getOrCreateConversation(visitor.id)
 
   // Persist the user's message right away
   await prisma.message.create({
@@ -83,9 +122,33 @@ export async function POST(request: Request): Promise<Response> {
 
   const profileLines = JSON.stringify(profile, null, 2)
 
-  const memoryBlock = visitor.memorySummary
-    ? `\n## What you remember about this visitor\n${visitor.memorySummary}\n`
-    : ""
+  let memory: z.infer<typeof memorySchema> | null = null
+
+  if (visitor.memorySummary) {
+    try {
+      memory = JSON.parse(visitor.memorySummary)
+    } catch (error) {
+      console.error("Stored memory was not valid JSON, ignoring:", error)
+      memory = null
+    }
+  }
+
+  const memoryBlock = memory
+    ? `
+    ## Visitor Memory
+
+    Interests: ${memory.interests.length > 0 ? memory.interests.join(", ") : "None recorded yet"}
+    Last interaction: ${memory.lastInteraction || "Unknown"}
+
+    ${visitor.memorySummary}
+
+    ## Memory Rules
+
+    You have access to memory from previous visits with this person.
+    If they ask things like "do you remember me?" or "what did we talk about?", use the memory above.
+    Do not claim perfect recall — be honest that you remember general themes from past visits, not a transcript.
+    `
+      : ""
 
   const systemPrompt = `You are Earl Jan Do's personal AI assistant for his portfolio site.
 
@@ -117,9 +180,11 @@ export async function POST(request: Request): Promise<Response> {
         data: { conversationId: conversation.id, role: "assistant", content: text },
       })
 
-      // Update the rolling visitor summary every few turns, not every message
+      // Update the rolling visitor summary periodically, not every message.
+      // While testing, change this to `% 2 === 0` so it fires every exchange —
+      // bump it back to 6 once you've confirmed it's working.
       const messageCount = await prisma.message.count({ where: { conversationId: conversation.id } })
-      if (messageCount % 6 === 0) {
+      if (messageCount % 10 === 0) {
         try {
           const recent = await prisma.message.findMany({
             where: { conversationId: conversation.id },
@@ -128,23 +193,64 @@ export async function POST(request: Request): Promise<Response> {
           })
           const transcript = recent.reverse().map((m) => `${m.role}: ${m.content}`).join("\n")
 
-          const summaryResult = await streamText({
-            model: groq("llama-3.1-8b-instant"), // cheapest/fastest model for this
-            system: "Summarize in 2-3 short sentences what this visitor seems interested in, for future personalization. Be factual, no speculation.",
-            messages: [{ role: "user", content: transcript }],
-            maxOutputTokens: 100,
+          const memoryResponse = await generateText({
+            model: groq("llama-3.1-8b-instant"),
+            system: `
+            You are a data extraction engine.
+
+            Output MUST be valid JSON.
+
+            Never explain.
+            Never apologize.
+            Never answer questions.
+            Never write prose.
+            Never write markdown.
+
+            Output exactly this schema:
+
+            {
+              "interests": ["string"],
+              "lastInteraction": "string"
+            }
+            `,
+            prompt: `
+            Extract memory from the conversation below.
+
+            <conversation>
+            ${transcript}
+            </conversation>
+
+            Return JSON only.
+            `,
+            temperature: 0,
           })
-          const summary = await summaryResult.text
-          await prisma.visitor.update({
-            where: { id: visitor.id },
-            data: { memorySummary: summary },
-          })
-        } catch {
-          // Non-fatal — memory update failing shouldn't break chat
-          // return Response.json({ error: "ai_unavailable" }, { status: 503 })
+          try {
+            console.log("Transcript:", transcript)
+            console.log("Memory response:", memoryResponse.text)
+
+            const parsed = JSON.parse(memoryResponse.text)
+
+            const memoryResult = memorySchema.safeParse(parsed)
+
+            if (memoryResult.success) {
+              await prisma.visitor.update({
+                where: { id: visitor.id },
+                data: {
+                  memorySummary: JSON.stringify(memoryResult.data),
+                },
+              })
+            } else {
+              console.error("Memory validation failed", memoryResult.error)
+            }
+          } catch (err) {
+            console.error("Memory parse failed", err)
+          }
+        } catch (err) {
+          // Non-fatal — memory update failing shouldn't break the chat itself
+          console.error("Memory summary generation failed:", err)
         }
       }
-    }
+    },
   })
 
   const response = result.toUIMessageStreamResponse()
