@@ -19,7 +19,8 @@ export async function getOrCreateVisitor() {
   cookieStore.set(COOKIE_NAME, visitor.id, {
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 180, // 180 days
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 365, // 365 days
     path: "/",
   })
   return visitor
