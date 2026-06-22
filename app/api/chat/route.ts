@@ -1,11 +1,12 @@
 import { getGirlfriend } from "@/app/data/girlfriend"
 import { getProfile } from "@/app/data/profile"
 import { getProjects } from "@/app/data/projects"
+import { getWorkExperience } from "@/app/data/work-experience"
 import { prisma } from "@/app/lib/prisma"
 import { checkRateLimit } from "@/app/lib/rate-limit"
 import { getOrCreateConversation, getOrCreateVisitor } from "@/app/lib/visitor"
 import { createGroq } from "@ai-sdk/groq"
-import { streamText, generateObject, convertToModelMessages, type UIMessage, generateText } from "ai"
+import { streamText, convertToModelMessages, type UIMessage, generateText } from "ai"
 import { z } from "zod"
 
 export const runtime = "nodejs"
@@ -106,15 +107,25 @@ export async function POST(request: Request): Promise<Response> {
   })
 
   // Build context from your static data
-  const [projects, girlfriend, profile] = await Promise.all([
+  const [projects, girlfriend, profile, experience] = await Promise.all([
     getProjects(),
     getGirlfriend(),
     getProfile(),
+    getWorkExperience()
   ])
 
-  const projectLines = projects
-    .map((p) => `- ${p.title} (${p.stack.join(", ")}): ${p.description}\n  Github: ${p.github} | Demo: ${p.demoLink}`)
+  const projectLines = projects.featuredProjects
+    ?.map((p) => `- ${p.title} (${p.stack.join(", ")}): ${p.description}\n  Github: ${p.github} | Demo: ${p.demoLink}`)
     .join("\n")
+
+  const experienceLines = experience.workExperience
+    ?.map((e) => 
+      `- ${e.role}
+    Company: ${e.company}
+    Period: ${e.period} 
+    Highlights: ${e.highlights.join(", ")}`
+  )
+  .join("\n \n");
 
   const girlfriendLines = girlfriend
     .map((g) => `- ${g.Girlfriend}, ${g.Character}, age ${g.Age}`)
@@ -160,6 +171,10 @@ export async function POST(request: Request): Promise<Response> {
 
     ## Girlfriend (just for fun, joke about it lightly if asked)
     ${girlfriendLines}
+
+    ## Work Experience
+    ${experienceLines}
+    
     ${memoryBlock}
     ## Rules
     - Respond in first person as Earl when appropriate, or as his assistant — be consistent
